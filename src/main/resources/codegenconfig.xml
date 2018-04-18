@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="codegen.xsd">
+	<variables>
+		<variable name="developer" value="Chen" />
+		<variable name="company" value="北京能力有限公司" />
+	</variables>
+	
+	<templates>
+		<template id="model" path="model.ftl"/>
+		<template id="dao" path="dao.ftl"/>
+		<template id="service"  path="service.ftl"/>
+		<template id="controller"  path="controller.ftl"/>
+		<template id="list"  path="list.jsp"/>
+		<template id="get"  path="get.jsp"/>
+		<template id="edit"  path="edit.jsp"/>
+		<template id="pageEdit" path="pageEdit.jsp"/>
+		<template id="formValid" path="formValid.ftl" />
+		<template id="formproperties" path="formproperties.ftl" />
+		<template id="mapper" path="mapper.ftl"/>
+		
+ 		<template id="detail" path="detail.ftl"/> 
+		<template id="modify" path="modify.ftl"/>  
+		<template id="modifyPage" path="modifyPage.ftl"/>  
+		
+		<template id="mobileForm" path="mobileform.ftl"/>
+		<template id="mobileDetail" path="mobiledetail.ftl"/>
+		<template id="editByTab"  path="editByTab.jsp"/>
+		
+		<template id="js" path="js.ftl"/>
+		
+	</templates>
+	
+	<files baseDir="D:\tmp" >
+		
+		<file refTemplate="controller" filename="{class}Controller.java" dir="java\com\{org}\{system}\web\{role}"  override="true"/>
+		<file refTemplate="model" filename="{class}.java" dir="java\{org}\common\entity\{package}"  sub="true" override="true"/>
+		<file refTemplate="dao" filename="{class}Dao.java" dir="java\{org}\common\repository\{package}" sub="true"  override="true"/>
+		<file refTemplate="service" filename="{class}Service.java" dir="java\com\{org}\{system}\service\{package}"  override="true"/>
+		<file refTemplate="mapper" filename="{class}Mapper.xml" dir="resources/mybatis/{package}"  sub="true"  override="true"/> 
+		<!-- <file refTemplate="js" filename="{classVar}.js" dir="webapp\resources\front\js\{role}" sub="true" override="true"/>
+		<file refTemplate="list" filename="{classVar}.jsp" dir="webapp\WEB-INF\views\{role}" sub="true" override="true"/> -->
+		
+		<!-- 
+		<file refTemplate="get" filename="{classVar}Get.jsp" dir="WebContent\WEB-INF\view\{system}\{package}" sub="true" override="true"/>
+		<file refTemplate="pageEdit" filename="{classVar}Edit.jsp" dir="WebContent\WEB-INF\view\{system}\{package}" sub="true" override="true"/>
+		<file refTemplate="editByTab" filename="{classVar}Edit.jsp" dir="WebContent\WEB-INF\view\{system}\{package}" sub="true" override="true"/>
+		<file refTemplate="detail" filename="{classVar}Detail.jsp" dir="WebContent\WEB-INF\view\{system}\{package}" sub="true" override="true"/>
+		<file refTemplate="modifyPage" filename="{classVar}Modify.jsp" dir="WebContent\WEB-INF\view\{system}\{package}" sub="true" override="true"/> -->
+	</files>
+	
+	<table tableName="a_task" >
+		<variable name="class" value="Task" />
+		<variable name="classVar" value="task" />
+		<variable name="role" value="admin" />
+	    <variable name="package" value="user" />
+	</table>
+
+</config>
