@@ -8,4 +8,4 @@ management:
 logging:
   file: D:/logs/boot/admin.log
   
-foo: "change"
+foo: "2 change"
