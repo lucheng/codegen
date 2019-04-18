@@ -8,4 +8,4 @@ management:
 logging:
   file: D:/logs/boot/admin.log
   
-foo: 8066
+foo: "change"
