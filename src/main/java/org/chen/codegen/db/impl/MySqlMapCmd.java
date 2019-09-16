@@ -61,7 +61,7 @@ public class MySqlMapCmd<T> implements MapCmd<ColumnModel>
 		if (s.equals("int") || s.equals("bit"))
 			return "Integer";
 		if (s.equals("tinyint") || s.equals("smallint"))
-			return "Short";
+			return "Integer";
 		if (s.equals("varchar") || s.endsWith("text"))
 			return "String";
 		if (s.equals("varchar") || s.endsWith("text"))

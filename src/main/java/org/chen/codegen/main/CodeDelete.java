@@ -12,8 +12,8 @@ import java.util.Properties;
 import org.chen.codegen.exception.CodegenException;
 import org.chen.codegen.model.ConfigModel;
 import org.chen.codegen.model.Files;
+import org.chen.codegen.model.SubTable;
 import org.chen.codegen.model.Table;
-import org.chen.codegen.model.Table.SubTable;
 import org.chen.codegen.util.FileHelper;
 import org.chen.codegen.util.StringUtil;
 import org.chen.codegen.util.XmlUtil;
@@ -145,7 +145,7 @@ public class CodeDelete {
 		String str2 = paramConfigModel.getCharset();
 		for(Table localTable:paramConfigModel.getTables()){
 			Map<String,String> localMap = localTable.getVariable();
-			List<org.chen.codegen.model.File> localList2 = localFiles.getFiles();
+			List<org.chen.codegen.model.File> localList2 = localFiles.getFileList();
 			Iterator<org.chen.codegen.model.File> localObject1 = localList2.iterator();
 			while (localObject1.hasNext()) {
 				org.chen.codegen.model.File localObject2 = localObject1.next();

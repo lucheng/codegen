@@ -22,8 +22,8 @@ import org.chen.codegen.model.ConfigModel;
 import org.chen.codegen.model.Database;
 import org.chen.codegen.model.Files;
 import org.chen.codegen.model.GenAll;
+import org.chen.codegen.model.SubTable;
 import org.chen.codegen.model.Table;
-import org.chen.codegen.model.Table.SubTable;
 import org.chen.codegen.model.TableModel;
 import org.chen.codegen.model.Templates;
 import org.chen.codegen.util.FileHelper;
@@ -42,8 +42,8 @@ public class Codegen {
 
 	private static String rootPath = "";
 
-	public static void setRootPath(String paramString) {
-		rootPath = paramString;
+	public static void setRootPath(String path) {
+		rootPath = path;
 	}
 
 	private static String getRootPath() {
@@ -55,9 +55,10 @@ public class Codegen {
 		}
 		return rootPath;
 	}
-	
+
 	/**
 	 * 返回Xsd路径
+	 * 
 	 * @return
 	 * @throws CodegenException
 	 */
@@ -69,9 +70,10 @@ public class Codegen {
 		}
 		return str;
 	}
-	
+
 	/**
 	 * 返回Xml路径
+	 * 
 	 * @return
 	 * @throws CodegenException
 	 */
@@ -83,8 +85,10 @@ public class Codegen {
 		}
 		return str;
 	}
+
 	/**
 	 * 返回properties路径
+	 * 
 	 * @return
 	 * @throws CodegenException
 	 */
@@ -104,7 +108,7 @@ public class Codegen {
 		if (!"".equals(validTip)) {
 			throw new CodegenException("XML文件通过XSD文件校验失败:" + validTip);
 		}
-		ConfigModel configModel = new ConfigModel();
+
 		SAXReader sAXReader = new SAXReader();
 		Document document = null;
 		try {
@@ -112,139 +116,34 @@ public class Codegen {
 		} catch (DocumentException e) {
 			throw new CodegenException("读取XML出错!", e);
 		}
-		Element rootElement = document.getRootElement();
-		Element variables = rootElement.element("variables");
-
-		Iterator<?> variableIterator = variables.elementIterator("variable");
-		while (variableIterator.hasNext()) {
-			Element variable = (Element) variableIterator.next();
-			String name = variable.attributeValue("name");
-			String value = variable.attributeValue("value");
-			configModel.getVariables().put(name, value);
-		}
 
 		Properties properties = new Properties();
 		String propertiesPath = getPropertiesPath();
 		InputStream inputStream = new BufferedInputStream(new FileInputStream(propertiesPath));
 		properties.load(inputStream);
 
-		String charset = properties.getProperty("charset");
-		String dbHelperClass = properties.getProperty("dbHelperClass");
-		String url = properties.getProperty("url");
-		String username = properties.getProperty("username");
-		String password = properties.getProperty("password");
-		
-		String org = properties.getProperty("org");
-		String system = properties.getProperty("system");
+		Element rootElement = document.getRootElement();
 
-		configModel.getVariables().put("org", org);
-		configModel.getVariables().put("system", system);
-		configModel.setCharset(charset);
-		
-		configModel.setDatabase(new Database(dbHelperClass, url, username, password));
+		Templates templates = getTemplates(rootElement);
 
-		String templatePath = getRootPath() + "template";
-
-		Templates templates = new Templates(templatePath);
+		ConfigModel configModel = new ConfigModel();
+		configModel.setVariables(getVariables(rootElement));
 		configModel.setTemplates(templates);
-
-		Element templatesElement = rootElement.element("templates");
-
-		Iterator<?> templatesIterator = templatesElement.elementIterator("template");
-
-		while (templatesIterator.hasNext()) {
-			Element template = (Element)templatesIterator.next();
-			String id = template.attributeValue("id");
-			String path = template.attributeValue("path");
-			templates.getTemplate().put(id, path);
-		}
-
-		Element filesElement = rootElement.element("files");
-		if (filesElement != null) {
-			Files files = new Files();
-			configModel.setFiles(files);
-			String baseDir = filesElement.attributeValue("baseDir");
-			files.setBaseDir(baseDir);
-			Iterator<?> fileIterator = filesElement.elementIterator("file");
-			while (fileIterator.hasNext()) {
-				Element fileElement = (Element)fileIterator.next();
-				String refTemplate = fileElement.attributeValue("refTemplate");
-				String filename = fileElement.attributeValue("filename");
-				String dir = fileElement.attributeValue("dir");//StringUtil.replaceVariable(fileElement.attributeValue("dir"), configModel.getVariables());
-				String refTemplatePath = templates.getTemplate().get(refTemplate);
-				if (refTemplatePath == null) {
-					throw new CodegenException("没有找到" + (String) refTemplate + "对应的模版!");
-				}
-				String sub = fileElement.attributeValue("sub");
-				String override = fileElement.attributeValue("override");
-				boolean bool = false;
-				if ((StringUtil.isNotEmpty(override)) && (override.equals("true"))) {
-					bool = true;
-				}
-
-				if ((sub != null) && (sub.toLowerCase().equals("true"))) {
-					files.addFile(refTemplatePath,filename, dir, true, bool, false,"","", "");
-				} else {
-					files.addFile(refTemplatePath,filename, dir, false, bool, false,"", "", "");
-				}
-			}
-
-			Iterator<?> tableIterator = rootElement.elementIterator("table");
-			while (tableIterator.hasNext()) {
-				Element tableElement = (Element)tableIterator.next();
-				String tableName = tableElement.attributeValue("tableName");
-				Table table = new Table(tableName);
-
-				Iterator<?> tableVariableItr = tableElement.elementIterator("variable");
-
-				while (tableVariableItr.hasNext()) {
-					Element variable = (Element)tableVariableItr.next();
-					String name = variable.attributeValue("name");
-					String value = variable.attributeValue("value");
-					table.getVariable().put(name, value);
-					if (StringUtil.isNotEmpty(table.getVariable().get("class"))) {
-						String classVar = StringUtil.toFirstLowerCase(table.getVariable().get("class"));
-						table.getVariable().put("classVar", classVar);
-					}
-				}
-
-				Iterator<?> subtableIterator = tableElement.elementIterator("subtable");
-
-				while (subtableIterator.hasNext()) {
-					Element subtableElement = (Element)subtableIterator.next();
-					String tablename = subtableElement.attributeValue("tablename");
-					String foreignKey = subtableElement.attributeValue("foreignKey");
-
-					Map<String, String> subTableMap = new HashMap<>();
-					Iterator<?> subVariableIterator = subtableElement.elementIterator("variable");
-
-					while (subVariableIterator.hasNext()) {
-						Element subVariableElement = (Element)subVariableIterator.next();
-						String name = subVariableElement.attributeValue("name");
-						String value = subVariableElement.attributeValue("value");
-						subTableMap.put(name, value);
-						if (StringUtil.isNotEmpty(subTableMap.get("class"))) {
-							String clazz = StringUtil.toFirstLowerCase(subTableMap.get("class"));
-							subTableMap.put("classVar", clazz);
-						}
-					}
-					table.addSubTable(tablename, foreignKey, subTableMap);
-				}
-				configModel.getTables().add(table);
-			}
-		}
+		configModel.setCharset(properties.getProperty("charset"));
+		configModel.setDatabase(getDatebase(properties));
+		configModel.setFiles(getFiles(rootElement, templates));
+		configModel.setTables(getTables(rootElement));
 
 		Iterator<?> genAllIterator = rootElement.elementIterator("genAll");
-
 		while (genAllIterator.hasNext()) {
-			Element element = (Element)genAllIterator.next();
+			Element element = (Element) genAllIterator.next();
 			String tableNames = element.attributeValue("tableNames");
 			GenAll genAll = new GenAll(tableNames);
 			configModel.setGenAll(genAll);
 			Iterator<?> fileIterator = element.elementIterator("file");
 
 			while (fileIterator.hasNext()) {
-				Element fileElement = (Element)fileIterator.next();
+				Element fileElement = (Element) fileIterator.next();
 				String refTemplate = fileElement.attributeValue("refTemplate");
 				String filename = fileElement.attributeValue("filename");
 				String extName = fileElement.attributeValue("extName");
@@ -254,31 +153,172 @@ public class Codegen {
 				if (template == null) {
 					throw new CodegenException("找不到模板： " + refTemplate + "!");
 				}
+
 				if (("SingleFile".equals(genMode)) && (filename == null)) {
 					throw new CodegenException("当SingleFile模式时，必须要填filename!");
 				}
+
 				if (("MultiFile".equals(genMode)) && (extName == null)) {
 					throw new CodegenException("当MultiFile模式时，必须要填extName!");
 				}
 
-				GenAll.File localObject15 = genAll.new File(template, filename, extName,
-						dir, genMode);
-				 genAll.getFile().add(localObject15);
+				GenAll.File localFile = genAll.new File(template, filename, extName, dir, genMode);
+				genAll.getFile().add(localFile);
 				Iterator<?> fileVariableIterator = fileElement.elementIterator("variable");
 				while (fileVariableIterator.hasNext()) {
-					Element localObject17 = (Element)fileVariableIterator.next();
+					Element localObject17 = (Element) fileVariableIterator.next();
 					String name = localObject17.attributeValue("name");
 					String value = localObject17.attributeValue("value");
-					localObject15.getVariable().put(name, value);
+					localFile.getVariable().put(name, value);
 				}
 			}
 		}
 		return configModel;
 	}
 
-	private IDbHelper getDbHelper(ConfigModel paramConfigModel) throws CodegenException {
+	private Files getFiles(Element rootElement, Templates templates) throws CodegenException {
+		Files files = null;
+		Element filesElement = rootElement.element("files");
+		if (filesElement != null) {
+			files = new Files();
+			String baseDir = filesElement.attributeValue("baseDir");
+			files.setBaseDir(baseDir);
+			files.setFileList(getFileList(templates, filesElement));
+		}
+		return files;
+	}
+
+	private List<org.chen.codegen.model.File> getFileList(Templates templates, Element filesElement)
+			throws CodegenException {
+		List<org.chen.codegen.model.File> files = new ArrayList<>();
+		Iterator<?> fileIterator = filesElement.elementIterator("file");
+		while (fileIterator.hasNext()) {
+			Element fileElement = (Element) fileIterator.next();
+			String refTemplate = fileElement.attributeValue("refTemplate");
+			String filename = fileElement.attributeValue("filename");
+			String dir = fileElement.attributeValue("dir");// StringUtil.replaceVariable(fileElement.attributeValue("dir"),
+															// configModel.getVariables());
+			String refTemplatePath = templates.getTemplate().get(refTemplate);
+			if (refTemplatePath == null) {
+				throw new CodegenException("没有找到" + (String) refTemplate + "对应的模版!");
+			}
+			String sub = fileElement.attributeValue("sub");
+			String override = fileElement.attributeValue("override");
+			boolean bool = false;
+			if ((StringUtil.isNotEmpty(override)) && (override.equals("true"))) {
+				bool = true;
+			}
+
+			if ((sub != null) && (sub.toLowerCase().equals("true"))) {
+				files.add(
+						new org.chen.codegen.model.File(refTemplatePath, filename, dir, true, bool, false, "", "", ""));
+			} else {
+				files.add(new org.chen.codegen.model.File(refTemplatePath, filename, dir, false, bool, false, "", "",
+						""));
+			}
+		}
+		return files;
+	}
+
+	private Database getDatebase(Properties properties) {
+		String dbHelperClass = properties.getProperty("dbHelperClass");
+		String url = properties.getProperty("url");
+		String username = properties.getProperty("username");
+		String password = properties.getProperty("password");
+		return new Database(dbHelperClass, url, username, password);
+	}
+
+	private List<Table> getTables(Element rootElement) {
+		List<Table> tableList = new ArrayList<>();
+		Iterator<?> iterator = rootElement.elementIterator("table");
+
+		while (iterator.hasNext()) {
+			Element element = (Element) iterator.next();
+			String tableName = element.attributeValue("tableName");
+			Table table = new Table(tableName);
+			table.setVariable(getTableVariable(element));
+			table.setSubtable(getSubTableList(element));
+			tableList.add(table);
+		}
+
+		return tableList;
+	}
+
+	private List<SubTable> getSubTableList(Element tableElement) {
+
+		List<SubTable> list = new ArrayList<>();
+
+		Iterator<?> iterator = tableElement.elementIterator("subtable");
+		while (iterator.hasNext()) {
+			Element element = (Element) iterator.next();
+			String tablename = element.attributeValue("tablename");
+			String foreignKey = element.attributeValue("foreignKey");
+			Map<String, String> subTableMap = getTableVariable(element);
+			list.add(new SubTable(tablename, foreignKey, subTableMap));
+		}
+		return list;
+	}
+
+	/**
+	 * 获得table的变量
+	 * 
+	 * @param tableElement
+	 * @return
+	 */
+	private Map<String, String> getTableVariable(Element tableElement) {
+
+		Map<String, String> map = getMapByElement(tableElement, "variable", "name", "value");
+
+		if (StringUtil.isNotEmpty(map.get("class")) && StringUtil.isEmpty(map.get("classVar"))) {
+			String classVar = StringUtil.toFirstLowerCase(map.get("class"));
+			map.put("classVar", classVar);
+		}
+		return map;
+	}
+
+	/**
+	 * 获取系统变量
+	 * 
+	 * @param configModel
+	 * @param rootElement
+	 * @return
+	 * @author luCheng
+	 */
+	private Map<String, String> getVariables(Element rootElement) {
+		Element variables = rootElement.element("variables");
+		return getMapByElement(variables, "variable", "name", "value");
+	}
+
+	private Map<String, String> getMapByElement(Element rootElement, String subName, String keyName, String valueName) {
+		Map<String, String> map = new HashMap<>();
+		Iterator<?> iterator = rootElement.elementIterator(subName);
+		while (iterator.hasNext()) {
+			Element variable = (Element) iterator.next();
+			String key = variable.attributeValue(keyName);
+			String value = variable.attributeValue(valueName);
+			map.put(key, value);
+		}
+		return map;
+	}
+
+	/**
+	 * 获取模板属性
+	 * 
+	 * @param rootElement
+	 * @return
+	 */
+	private Templates getTemplates(Element rootElement) {
+		String templatePath = getRootPath() + "template";
+		Element templatesElement = rootElement.element("templates");
+
+		Templates templates = new Templates(templatePath);
+		templates.setTemplate(getMapByElement(templatesElement, "template", "id", "path"));
+		return templates;
+	}
+
+	private IDbHelper getDbHelper(ConfigModel configModel) throws CodegenException {
 		IDbHelper localIDbHelper = null;
-		String str = paramConfigModel.getDatabase().getDbHelperClass();
+		String str = configModel.getDatabase().getDbHelperClass();
 		try {
 			localIDbHelper = (IDbHelper) Class.forName(str).newInstance();
 		} catch (InstantiationException localInstantiationException) {
@@ -289,22 +329,21 @@ public class Codegen {
 		} catch (ClassNotFoundException localClassNotFoundException) {
 			throw new CodegenException("找不到指定的dbHelperClass:" + str + "!", localClassNotFoundException);
 		}
-		localIDbHelper.setUrl(paramConfigModel.getDatabase().getUrl(), paramConfigModel.getDatabase().getUsername(),
-				paramConfigModel.getDatabase().getPassword());
+		localIDbHelper.setUrl(configModel.getDatabase().getUrl(), configModel.getDatabase().getUsername(),
+				configModel.getDatabase().getPassword());
 		return localIDbHelper;
 	}
 
-	private List<TableModel> getTableModelList(IDbHelper dbHelper, ConfigModel configModel)
-			throws CodegenException {
+	private List<TableModel> getTableModelList(IDbHelper dbHelper, ConfigModel configModel) throws CodegenException {
 		ArrayList<TableModel> tableModelList = new ArrayList<>();
-		for(Table table :configModel.getTables()){
+		for (Table table : configModel.getTables()) {
 			String tableName = table.getTableName();
 			TableModel tableModel = dbHelper.getByTable(tableName);
 			tableModel.setVariables(table.getVariable());
 			tableModel.setSub(false);
 			List<SubTable> subTableList = table.getSubtable();
-			
-			for(Table.SubTable subTable :subTableList){
+
+			for (SubTable subTable : subTableList) {
 				Map<String, String> localMap = subTable.getVars();
 				TableModel subTableModel = dbHelper.getByTable(subTable.getTableName());
 				subTableModel.setVariables(localMap);
@@ -351,8 +390,8 @@ public class Codegen {
 		FileHelper.writeFile(localFile, paramString4, str3);
 	}
 
-	private void genTableByConfig(IDbHelper dbHelper, ConfigModel configModel,
-			Configuration configuration) throws CodegenException {
+	private void genTableByConfig(IDbHelper dbHelper, ConfigModel configModel, Configuration configuration)
+			throws CodegenException {
 		try {
 			List<TableModel> tableModelList = getTableModelList(dbHelper, configModel);
 			if ((tableModelList == null) || (tableModelList.size() == 0)) {
@@ -361,21 +400,21 @@ public class Codegen {
 			}
 			Files files = configModel.getFiles();
 			String baseDir = files.getBaseDir();
-			if ((files.getFiles() == null) || (files.getFiles().size() == 0)) {
+			if (files.getFileList() == null || files.getFileList().isEmpty()) {
 				System.out.println("没有指定生成的文件!");
 				return;
 			}
 			System.out.println("*********开始生成**********");
-			
-			for(TableModel tableModel:tableModelList){
+
+			for (TableModel tableModel : tableModelList) {
 				String tableName = tableModel.getTableName();
-				Map<String,String> variablesMap = tableModel.getVariables();
-				
+				Map<String, String> variablesMap = tableModel.getVariables();
+
 				variablesMap.putAll(configModel.getVariables());
-				
+
 				boolean sub = tableModel.getSub();
-				
-				for(org.chen.codegen.model.File file:files.getFiles()){
+
+				for (org.chen.codegen.model.File file : files.getFileList()) {
 					String filename = file.getFilename();
 					String startTag = file.getStartTag();
 					String endTag = file.getEndTag();
@@ -388,21 +427,21 @@ public class Codegen {
 						filename = StringUtil.replaceVariable(filename, variablesMap);
 						dir = StringUtil.replaceVariable(dir, variablesMap);
 						dir = StringUtil.combilePath(baseDir, dir);
-						Map<String,Object> localHashMap = new HashMap<String,Object>();
+						Map<String, Object> localHashMap = new HashMap<String, Object>();
 						localHashMap.put("model", tableModel);
 						localHashMap.put("vars", configModel.getVariables());
 						localHashMap.put("date", new Date());
 						if (file.getAppend()) {
-							appendFile(dir, filename, file.getTemplate(), configModel.getCharset(),
-									configuration, localHashMap, file.getInsertTag(), startTag, endTag);
+							appendFile(dir, filename, file.getTemplate(), configModel.getCharset(), configuration,
+									localHashMap, file.getInsertTag(), startTag, endTag);
 						} else if (isOverride) {
-							genFile(dir, filename, file.getTemplate(), configModel.getCharset(),
-									configuration, localHashMap);
+							genFile(dir, filename, file.getTemplate(), configModel.getCharset(), configuration,
+									localHashMap);
 						} else {
 							File localFile1 = new File(dir + "\\" + filename);
 							if (!localFile1.exists()) {
-								genFile(dir, filename, file.getTemplate(), configModel.getCharset(),
-										configuration, localHashMap);
+								genFile(dir, filename, file.getTemplate(), configModel.getCharset(), configuration,
+										localHashMap);
 							}
 						}
 						System.out.println(filename + " 生成成功!");
@@ -418,7 +457,7 @@ public class Codegen {
 	}
 
 	private void genFile(String paramString1, String paramString2, String paramString3, String paramString4,
-			Configuration paramConfiguration, Object paramMap) throws IOException, TemplateException {
+			Configuration paramConfiguration, Map<String, Object> paramMap) throws IOException, TemplateException {
 		File localFile = new File(paramString1, paramString2);
 		if (!localFile.exists()) {
 			if (!localFile.getParentFile().exists()) {
@@ -432,15 +471,15 @@ public class Codegen {
 		localTemplate.process(paramMap, localOutputStreamWriter);
 	}
 
-	private void getAllTable(IDbHelper paramIDbHelper, ConfigModel paramConfigModel, Configuration paramConfiguration)
+	private void getAllTable(IDbHelper dbHelper, ConfigModel configModel, Configuration configuration)
 			throws CodegenException, IOException, TemplateException {
-		GenAll localGenAll = paramConfigModel.getGenAll();
+		GenAll localGenAll = configModel.getGenAll();
 		if (localGenAll == null) {
 			return;
 		}
 		List<String> tableList = null;
 		if (localGenAll.getTableNames() == null) {
-			tableList = paramIDbHelper.getAllTable();
+			tableList = dbHelper.getAllTable();
 		} else {
 			tableList = new ArrayList<>();
 			for (String tableName : localGenAll.getTableNames().replaceAll(" ", "").split(",")) {
@@ -454,34 +493,33 @@ public class Codegen {
 			return;
 		}
 		System.out.println("----------------生成多表开始------------------");
-		
-		for(GenAll.File localFile:localGenAll.getFile()){
+
+		for (GenAll.File localFile : localGenAll.getFile()) {
 			if ("MultiFile".equals(localFile.getGenMode())) {
 				Iterator<String> localObject2 = tableList.iterator();
 				while (localObject2.hasNext()) {
 					String localObject3 = localObject2.next();
-					TableModel localObject4 = paramIDbHelper.getByTable((String) localObject3);
-					Map<String,Object> localObject5 = new HashMap<>();
+					TableModel localObject4 = dbHelper.getByTable(localObject3);
+					Map<String, Object> localObject5 = new HashMap<>();
 					localObject5.put("model", localObject4);
 					localObject5.put("date", new Date());
 					genFile(localFile.getDir(), (String) localObject3 + "." + localFile.getExtName(),
-							localFile.getTemplate(), paramConfigModel.getCharset(), paramConfiguration,
-							localObject5);
-					System.out.println((String) localObject3 + "." + localFile.getExtName() + " 生成成功!");
+							localFile.getTemplate(), configModel.getCharset(), configuration, localObject5);
+					System.out.println(localObject3 + "." + localFile.getExtName() + " 生成成功!");
 				}
 			} else if ("SingleFile".equals(localFile.getGenMode())) {
-				List<TableModel> localObject2 = new ArrayList<>();
+				List<TableModel> tableModelList = new ArrayList<>();
 				Iterator<String> localObject3 = tableList.iterator();
 				while (localObject3.hasNext()) {
 					String localObject4 = localObject3.next();
-					TableModel localObject5 = paramIDbHelper.getByTable((String) localObject4);
-					localObject2.add(localObject5);
+					TableModel localObject5 = dbHelper.getByTable((String) localObject4);
+					tableModelList.add(localObject5);
 				}
-				Map<String,Object> tempMap = new HashMap<>();
-				tempMap.put("models", localObject2);
+				Map<String, Object> tempMap = new HashMap<>();
+				tempMap.put("models", tableModelList);
 				tempMap.put("date", new Date());
 				genFile(localFile.getDir(), localFile.getFilename(), localFile.getTemplate(),
-						paramConfigModel.getCharset(), paramConfiguration, tempMap);
+						configModel.getCharset(), configuration, tempMap);
 				System.out.println(localFile.getFilename() + " 生成成功!");
 			}
 		}
@@ -501,9 +539,12 @@ public class Codegen {
 			IDbHelper dbHelper = getDbHelper(configModel);
 			genTableByConfig(dbHelper, configModel, configuration);
 			getAllTable(dbHelper, configModel, configuration);
-		} catch (Exception localException) {
-			localException.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
+		
+		
+		
 	}
 
 	public static void main(String[] args) throws Exception {

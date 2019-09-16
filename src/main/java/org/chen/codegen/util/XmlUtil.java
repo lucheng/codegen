@@ -6,16 +6,12 @@ import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
 import javax.xml.validation.Validator;
 import org.xml.sax.SAXException;
-/**
- * Xml������ 
- */
+
 public class XmlUtil {
 	
 	/**
-	 * ��֤xml�Ƿ����xsd
 	 * @param xsdPath
 	 * @param xmlPath
-	 * @return ��ʾ��Ϣ
 	 */
 	public static String validXmlBySchema(String xsdPath, String xmlPath) {
 		SchemaFactory schemaFactory = SchemaFactory.newInstance("http://www.w3.org/2001/XMLSchema");
