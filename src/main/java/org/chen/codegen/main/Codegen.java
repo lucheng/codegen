@@ -48,10 +48,10 @@ public class Codegen {
 
 	private static String getRootPath() {
 		if (rootPath.isEmpty()) {
-			rootPath = Codegen.class.getResource("/").getPath();
+			rootPath = Codegen.class.getResource(File.separator).getPath();
 		}
-		if (!rootPath.endsWith("\\")) {
-			rootPath += "\\";
+		if (!rootPath.endsWith(File.separator)) {
+			rootPath += File.separator;
 		}
 		return rootPath;
 	}
